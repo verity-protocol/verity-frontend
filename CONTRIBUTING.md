@@ -174,10 +174,10 @@ verity-frontend/
 │   ├── ui/                 # Reusable primitives
 │   ├── shared/             # Layout components
 │   └── features/           # Feature-specific components
-├── hooks/                  # Custom React hooks
 ├── services/               # API call functions (one per backend module)
 ├── types/                  # TypeScript interfaces (one per domain)
 ├── lib/                    # Utilities, constants, Stellar helpers
 ├── providers/              # React context providers (wallet, auth, theme)
-└── public/                 # Static assets
+├── test/                   # Test setup and utilities
+└── .github/                # CI workflows, issue templates, PR template
 ```
