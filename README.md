@@ -65,6 +65,34 @@ components/
     └── landing/     # Hero, DifferentiatorCards, HowItWorks, CTA (fully built)
 ```
 
+## Project Structure
+
+```
+verity-frontend/
+├── app/                         # App Router pages and layouts
+│   ├── (marketing)/             # Public pages
+│   │   ├── about/
+│   │   ├── developers/
+│   │   └── how-it-works/
+│   ├── (app)/                   # Authenticated pages
+│   │   ├── dashboard/
+│   │   ├── credentials/
+│   │   ├── identity/
+│   │   └── settings/
+│   ├── authorize/               # OAuth popup
+│   └── create/                  # Onboarding flow
+├── components/
+│   ├── features/landing/        # Landing page sections
+│   ├── shared/                  # Layout components
+│   └── ui/                      # Reusable primitives
+├── lib/                         # Utilities, constants, Stellar helpers
+├── providers/                   # React context (wallet, auth, theme)
+├── services/                    # API call functions (one per module)
+├── types/                       # TypeScript interfaces (one per domain)
+├── test/                        # Test setup
+└── .github/                     # CI, issue templates, PR template
+```
+
 ## Local Setup
 
 ### Prerequisites
