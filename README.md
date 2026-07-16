@@ -62,11 +62,7 @@ components/
 ├── ui/              # Reusable primitives (Button, Input, Card, Modal, Badge)
 ├── shared/          # Layout components (Navbar, Footer, Sidebar, WalletButton)
 └── features/        # Feature-specific components
-    ├── landing/     # Hero, DifferentiatorCards, HowItWorks, CTA (fully built)
-    ├── dashboard/   # VerificationStatus, LinkedWallets, CredentialsList, ConnectedApps
-    ├── identity/    # DidDetails
-    ├── auth/        # AuthorizePopup, ConnectWallet
-    └── onboarding/  # StepIndicator, WalletConnectStep, DocumentUploadStep
+    └── landing/     # Hero, DifferentiatorCards, HowItWorks, CTA (fully built)
 ```
 
 ## Local Setup
