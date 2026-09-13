@@ -17,20 +17,20 @@ export interface Credential {
   isRevoked: boolean;
   issuedAt: string;
   revokedAt: string | null;
+  /** Embedded issuer info when resolved with its relation. */
+  issuer?: { address: string; name: string } | null;
 }
 
-/** Credential with embedded issuer info for display. */
-export interface CredentialWithIssuer extends Credential {
-  issuerName: string;
-  issuerAddress: string;
-}
-
-/** Request to issue a new credential (internal — called after KYC verification). */
+/** Request to issue a new credential. Maps to POST /credentials. */
 export interface IssueCredentialRequest {
-  didAddress: string;
-  issuerAddress: string;
+  did: string;
   credentialType: string;
   credentialHash: string;
+}
+
+/** Request to revoke a credential. Maps to POST /credentials/:did/:type/revoke. */
+export interface RevokeCredentialRequest {
+  issuerAddress: string;
 }
 
 /** Credential status for display badges. */
