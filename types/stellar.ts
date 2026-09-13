@@ -14,20 +14,3 @@ export interface WalletConnection {
   /** Whether a connection attempt is in progress */
   isLoading: boolean;
 }
-
-/** Result of a Soroban RPC query. */
-export interface SorobanRpcResult {
-  /** Parsed return value from the contract method */
-  result: unknown;
-  /** Whether the simulation was successful */
-  success: boolean;
-  /** Error message if simulation failed */
-  error?: string;
-}
-
-/** Stellar account balance info. */
-export interface AccountBalance {
-  address: string;
-  /** Balance in XLM (not stroops) */
-  balance: string;
-}

@@ -1,25 +1,40 @@
 'use client';
 
+import { useState } from 'react';
 import { Navbar } from '@/components/shared/navbar';
 import { Footer } from '@/components/shared/footer';
 import { Button } from '@/components/ui/button';
 import { useWallet } from '@/providers/wallet-provider';
-import { APP_NAME, ROUTES } from '@/lib/constants';
+import { APP_NAME } from '@/lib/constants';
+import { useCreateDid } from '@/hooks/use-create-did';
 
 /**
- * Onboarding step 1 — connect wallet.
+ * Onboarding step 1 — create your identity.
  *
- * Multi-step flow with clear progress indicator.
- * Minimal, reassuring message that Verity pays the setup fee.
+ * Runs the two-phase flow: prepare (unsigned tx) → sign in Freighter →
+ * confirm (signed tx back to the backend). The backend covers the network
+ * fee, so the Freighter signature is free for the user.
  *
- * TODO: Implement full flow:
- * - Check if wallet is already connected
- * - Handle Freighter connection
- * - Redirect to step 2 after successful connection
- * - Show error state if Freighter is not installed
+ * On success the new `did:verity:` identifier is shown and the user continues
+ * to identity verification.
  */
 export default function CreatePage() {
-  const { isConnected, connect, isLoading } = useWallet();
+  const { isConnected, address, connect, isLoading } = useWallet();
+  const { phase, did, error, run, retry } = useCreateDid(address ?? '');
+  const [copied, setCopied] = useState(false);
+
+  const copyDid = async () => {
+    if (!did) return;
+    try {
+      await navigator.clipboard.writeText(did);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const continueUrl = did ? `/create/verify?did=${encodeURIComponent(did)}` : null;
 
   return (
     <>
@@ -46,33 +61,94 @@ export default function CreatePage() {
             <h1 className="text-xl font-bold text-navy">
               Create your {APP_NAME} identity
             </h1>
-            <p className="mt-3 text-sm text-navy-300">
-              Step 1: Connect your Stellar wallet. Don&apos;t worry — there&apos;s
-              no setup fee. {APP_NAME} covers the network cost.
-            </p>
 
-            <div className="mt-8">
-              {isConnected ? (
-                <div>
-                  <p className="mb-4 text-sm text-verified">Wallet connected</p>
-                  <a href={ROUTES.createVerify}>
-                    <Button variant="primary" size="lg" className="w-full">
+            {!isConnected ? (
+              <>
+                <p className="mt-3 text-sm text-navy-300">
+                  Step 1: Connect your Stellar wallet. Don&apos;t worry —
+                  there&apos;s no setup fee. {APP_NAME} covers the network cost.
+                </p>
+                <div className="mt-8">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="w-full"
+                    isLoading={isLoading}
+                    onClick={connect}
+                  >
+                    Connect Wallet
+                  </Button>
+                </div>
+              </>
+            ) : phase === 'success' && did ? (
+              <>
+                <div className="mt-6 rounded-lg border border-verified/20 bg-verified/5 p-4">
+                  <p className="text-sm font-semibold text-verified">
+                    Identity created
+                  </p>
+                  <p
+                    className="mt-2 break-all font-mono text-xs text-navy-300"
+                    title={did}
+                  >
+                    {did}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={copyDid}
+                    className="mt-2 text-xs font-medium text-accent hover:underline"
+                  >
+                    {copied ? 'Copied' : 'Copy identifier'}
+                  </button>
+                </div>
+                {continueUrl && (
+                  <a href={continueUrl}>
+                    <Button variant="primary" size="lg" className="mt-6 w-full">
                       Continue to verification
                     </Button>
                   </a>
+                )}
+              </>
+            ) : phase === 'error' ? (
+              <>
+                <div className="mt-6 rounded-lg border border-error/20 bg-error/5 p-4">
+                  <p className="text-sm font-semibold text-error">
+                    We couldn&apos;t create your identity
+                  </p>
+                  <p className="mt-1 text-xs text-navy-300">{error}</p>
                 </div>
-              ) : (
                 <Button
                   variant="primary"
                   size="lg"
-                  className="w-full"
-                  isLoading={isLoading}
-                  onClick={connect}
+                  className="mt-6 w-full"
+                  onClick={retry}
                 >
-                  Connect Wallet
+                  Try again
                 </Button>
-              )}
-            </div>
+              </>
+            ) : (
+              <>
+                <p className="mt-3 text-sm text-navy-300">
+                  Your identity is minted on the Stellar network. {APP_NAME}
+                  covers the network cost — you&apos;ll only approve the free
+                  transaction in Freighter.
+                </p>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="mt-8 w-full"
+                  isLoading={phase !== 'idle'}
+                  onClick={() => void run()}
+                >
+                  {phase === 'preparing'
+                    ? 'Preparing…'
+                    : phase === 'signing'
+                      ? 'Approve the signature in Freighter…'
+                      : phase === 'confirming'
+                        ? 'Confirming on the network…'
+                        : 'Create your identity'}
+                </Button>
+              </>
+            )}
 
             <p className="mt-6 text-xs text-navy-200">
               Requires the{' '}

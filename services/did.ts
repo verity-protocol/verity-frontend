@@ -1,109 +1,184 @@
 /**
- * DID service — API calls for identity management.
+ * DID service — real API calls for identity management.
  *
- * TODO: Replace all mock returns with real fetch() calls to the backend.
- * Use the API_ENDPOINTS constant for route paths and API_BASE_URL for the base.
+ * All identifiers are canonical `did:verity:<64 lowercase hex>` URIs.
+ * The backend rejects raw hex identifiers, so every identifier is normalized
+ * (and validated) before it is used in a path or payload.
  */
 
+import { ApiError, apiFetch } from '@/lib/api';
+import { API_ENDPOINTS } from '@/lib/constants';
+import { normalizeDidIdentifier } from '@/lib/did';
 import type {
+  ConfirmationResult,
   DidResolution,
-  CreateDidRequest,
-  LinkWalletRequest,
+  LinkedWallet,
+  PrepareCreateRequest,
+  PrepareDidResult,
+  PrepareLinkRequest,
+  PrepareUnlinkRequest,
+  ConfirmCreateRequest,
+  ConfirmLinkRequest,
+  ConfirmUnlinkRequest,
   SetVerificationRequest,
 } from '@/types';
-import { API_BASE_URL, API_ENDPOINTS } from '@/lib/constants';
 
 /**
- * Resolve a DID — returns the full identity document.
+ * Validate an identifier and URL-encode it for use in a path.
  *
- * TODO: Implement — GET ${API_BASE_URL}${API_ENDPOINTS.did.resolve(identifier)}
+ * @throws {DidFormatError} If the identifier is not canonical
+ */
+function didPath(identifier: string): string {
+  normalizeDidIdentifier(identifier);
+  return encodeURIComponent(identifier);
+}
+
+/**
+ * Resolve a DID to its full resolution document.
+ * GET /did/:identifier
  */
 export async function resolveDid(identifier: string): Promise<DidResolution> {
-  // TODO: Replace with real API call
-  void identifier;
-  return {
-    did: 'GCKFBEIYTX2L5OS6OSQ4OA',
-    owner: 'GCKFBEIYTX2L5OS6OSQ4OA',
-    isVerified: true,
-    wallets: [
-      { address: 'GCKFBEIYTX2L5OS6OSQ4OA', isPrimary: true },
-      { address: 'GBZQ7S2Y5MO3U7XK2HQ4PA', isPrimary: false },
-    ],
-    credentials: [
-      {
-        type: 'kyc_basic',
-        issuer: 'GBCI6...X2QOA',
-        issuedAt: new Date().toISOString(),
-        isRevoked: false,
-      },
-    ],
-    createdAt: new Date().toISOString(),
-  };
+  return apiFetch<DidResolution>(API_ENDPOINTS.did.resolve(didPath(identifier)));
 }
 
 /**
- * Create a new DID on-chain and in the backend.
+ * Resolve a DID by one of its linked wallet addresses.
  *
- * TODO: Implement — POST ${API_BASE_URL}${API_ENDPOINTS.did.create}
- * Body: { ownerAddress, nullifierHash? }
+ * Returns `null` when no DID is linked to the wallet (404), so callers can
+ * distinguish "not onboarded" from a genuine failure.
+ * GET /did/wallet/:address
  */
-export async function createDid(_request: CreateDidRequest): Promise<{ did: string }> {
-  // TODO: Replace with real API call
-  return { did: 'GCKFBEIYTX2L5OS6OSQ4OA' };
+export async function findDidByWallet(address: string): Promise<DidResolution | null> {
+  try {
+    return await apiFetch<DidResolution>(API_ENDPOINTS.did.findByWallet(address));
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 /**
- * Get all wallets linked to a DID.
- *
- * TODO: Implement — GET ${API_BASE_URL}${API_ENDPOINTS.did.wallets(didId)}
+ * List the wallets linked to a DID.
+ * GET /did/:identifier/wallets
  */
-export async function getLinkedWallets(
-  _didId: string,
-): Promise<Array<{ address: string; isPrimary: boolean }>> {
-  // TODO: Replace with real API call
-  return [
-    { address: 'GCKFBEIYTX2L5OS6OSQ4OA', isPrimary: true },
-    { address: 'GBZQ7S2Y5MO3U7XK2HQ4PA', isPrimary: false },
-  ];
+export async function getLinkedWallets(identifier: string): Promise<LinkedWallet[]> {
+  return apiFetch<LinkedWallet[]>(API_ENDPOINTS.did.listWallets(didPath(identifier)));
 }
 
 /**
- * Link a new wallet to a DID.
- *
- * TODO: Implement — POST ${API_BASE_URL}${API_ENDPOINTS.did.linkWallet(didId)}
- * Body: { walletAddress }
+ * Start DID creation — returns an unsigned transaction for Freighter signing.
+ * POST /did/prepare
  */
-export async function linkWallet(
-  _didId: string,
-  _request: LinkWalletRequest,
-): Promise<{ success: boolean }> {
-  // TODO: Replace with real API call
-  return { success: true };
+export async function prepareCreate(
+  request: PrepareCreateRequest,
+): Promise<PrepareDidResult> {
+  return apiFetch<PrepareDidResult>(API_ENDPOINTS.did.prepareCreate, {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
 }
 
 /**
- * Unlink a wallet from a DID.
- *
- * TODO: Implement — DELETE ${API_BASE_URL}${API_ENDPOINTS.did.unlinkWallet(didId, address)}
+ * Start linking a wallet — returns an unsigned transaction.
+ * POST /did/prepare/link
  */
-export async function unlinkWallet(
-  _didId: string,
-  _address: string,
-): Promise<{ success: boolean }> {
-  // TODO: Replace with real API call
-  return { success: true };
+export async function prepareLink(request: PrepareLinkRequest): Promise<PrepareDidResult> {
+  return apiFetch<PrepareDidResult>(API_ENDPOINTS.did.prepareLink, {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
 }
 
 /**
- * Set the verification status of a DID.
+ * Start unlinking a wallet — returns an unsigned transaction.
+ * POST /did/prepare/unlink
+ */
+export async function prepareUnlink(
+  request: PrepareUnlinkRequest,
+): Promise<PrepareDidResult> {
+  return apiFetch<PrepareDidResult>(API_ENDPOINTS.did.prepareUnlink, {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+/**
+ * Finish DID creation with the Freighter-signed transaction.
+ * POST /did/confirm
+ */
+export async function confirmCreate(
+  request: ConfirmCreateRequest,
+): Promise<ConfirmationResult> {
+  return apiFetch<ConfirmationResult>(API_ENDPOINTS.did.confirmCreate, {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+/**
+ * Finish linking a wallet with the Freighter-signed transaction.
+ * POST /did/confirm/link
+ */
+export async function confirmLink(request: ConfirmLinkRequest): Promise<ConfirmationResult> {
+  return apiFetch<ConfirmationResult>(API_ENDPOINTS.did.confirmLink, {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+/**
+ * Finish unlinking a wallet with the Freighter-signed transaction.
+ * POST /did/confirm/unlink
+ */
+export async function confirmUnlink(
+  request: ConfirmUnlinkRequest,
+): Promise<ConfirmationResult> {
+  return apiFetch<ConfirmationResult>(API_ENDPOINTS.did.confirmUnlink, {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+/**
+ * Set the on-chain verification status.
  *
- * TODO: Implement — PATCH ${API_BASE_URL}${API_ENDPOINTS.did.setVerification(didId)}
- * Body: { isVerified }
+ * NOTE: This endpoint is admin-gated — the backend signs the transaction with
+ * the admin key. Do NOT call this from onboarding flows, and never with
+ * unverified/fabricated input: `set_verified` writes permanent on-chain state.
+ * PATCH /did/:identifier/verification
  */
 export async function setVerification(
-  _didId: string,
-  _request: SetVerificationRequest,
-): Promise<{ success: boolean }> {
-  // TODO: Replace with real API call
-  return { success: true };
+  identifier: string,
+  request: SetVerificationRequest,
+): Promise<DidResolution> {
+  return apiFetch<DidResolution>(API_ENDPOINTS.did.setVerification(didPath(identifier)), {
+    method: 'PATCH',
+    body: JSON.stringify(request),
+  });
+}
+
+/**
+ * Classify a 409-conflict message from the backend.
+ *
+ * The backend maps two distinct on-chain failures to HTTP 409:
+ * - `DidPrepareExpiredError`     — the prepared auth entries are stale; the
+ *                                  frontend SHOULD silently re-prepare.
+ * - `DidSubmissionContentionError` — sequence contention that already retried
+ *                                  server-side (N submissions); the frontend
+ *                                  should NOT auto-retry on top of that and
+ *                                  instead surface a "try again" state.
+ *
+ * Anything unrecognized is treated as `unknown` — callers should fall back to
+ * the conservative "surface the error" behavior.
+ */
+export function classifyDidConflict(message: string): 'expired' | 'contention' | 'unknown' {
+  if (/expired/.test(message)) {
+    return 'expired';
+  }
+  if (/contention|collided/i.test(message)) {
+    return 'contention';
+  }
+  return 'unknown';
 }

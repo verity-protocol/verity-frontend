@@ -27,7 +27,7 @@ export interface Wallet {
   linkedAt: string;
 }
 
-/** Abbreviated wallet info returned in resolution documents. */
+/** Abbreviated wallet info returned by the link/unlink wallet queries. */
 export interface LinkedWallet {
   address: string;
   isPrimary: boolean;
@@ -43,7 +43,7 @@ export interface DidResolution {
   did: string;
   owner: string;
   isVerified: boolean;
-  wallets: LinkedWallet[];
+  wallets: string[];
   credentials: CredentialSummary[];
   createdAt: string;
 }
@@ -56,18 +56,58 @@ export interface CredentialSummary {
   isRevoked: boolean;
 }
 
-/** Request body for POST /did — creating a new DID. */
-export interface CreateDidRequest {
+/**
+ * Result of a prepare* call — an unsigned transaction awaiting Freighter
+ * signing before being handed back via confirm*.
+ */
+export interface PrepareDidResult {
+  method: 'did:create' | 'did:link' | 'did:unlink';
+  contractId: string;
+  did?: string;
+  txXdr: string;
+  authExpirationLedgers: number[];
+  validUntilLedger?: number;
+}
+
+/** Request body for POST /did/prepare — starting DID creation. */
+export interface PrepareCreateRequest {
   ownerAddress: string;
   nullifierHash?: string;
 }
 
-/** Request body for POST /did/:id/wallets — linking a wallet. */
-export interface LinkWalletRequest {
+/** Request body for POST /did/prepare/link — authorizing a wallet link. */
+export interface PrepareLinkRequest {
+  didIdentifier: string;
   walletAddress: string;
 }
 
-/** Request body for PATCH /did/:id/verification — setting verification status. */
+/** Request body for POST /did/prepare/unlink — authorizing a wallet unlink. */
+export interface PrepareUnlinkRequest {
+  didIdentifier: string;
+  walletAddress: string;
+  callerAddress: string;
+}
+
+/** Request body for POST /did/confirm — finishing DID creation. */
+export interface ConfirmCreateRequest {
+  txXdr: string;
+  nullifierHash?: string;
+}
+
+/** Request body for POST /did/confirm/link — finishing a wallet link. */
+export interface ConfirmLinkRequest {
+  txXdr: string;
+}
+
+/** Request body for POST /did/confirm/unlink — finishing a wallet unlink. */
+export interface ConfirmUnlinkRequest {
+  txXdr: string;
+}
+
+/** Request body for PATCH /did/:identifier/verification — admin-gated. */
 export interface SetVerificationRequest {
   isVerified: boolean;
 }
+
+/** Result of a confirm* call — the confirmed DID resolution. */
+export type ConfirmationResult = DidResolution;

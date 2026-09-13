@@ -1,42 +1,71 @@
 /**
- * Credential service — API calls for credential management.
- *
- * TODO: Replace all mock returns with real fetch() calls to the backend.
+ * Credential service — real API calls for credential management.
  */
 
-import type { Credential, IssueCredentialRequest } from '@/types';
-import { API_BASE_URL, API_ENDPOINTS } from '@/lib/constants';
+import { apiFetch } from '@/lib/api';
+import { API_ENDPOINTS } from '@/lib/constants';
+import { normalizeDidIdentifier } from '@/lib/did';
+import type {
+  Credential,
+  IssueCredentialRequest,
+  RevokeCredentialRequest,
+} from '@/types';
 
-/**
- * Get all credentials for a DID.
- *
- * TODO: Implement — GET ${API_BASE_URL}${API_ENDPOINTS.credentials.list(didId)}
- */
-export async function getCredentials(_didId: string): Promise<Credential[]> {
-  // TODO: Replace with real API call
-  return [
-    {
-      id: 'cred-001',
-      didId: 'did-001',
-      issuerId: 'issuer-001',
-      credentialType: 'kyc_basic',
-      credentialHash: 'abc123...',
-      isRevoked: false,
-      issuedAt: new Date().toISOString(),
-      revokedAt: null,
-    },
-  ];
+function didPath(did: string): string {
+  normalizeDidIdentifier(did);
+  return encodeURIComponent(did);
 }
 
 /**
- * Issue a new credential (called internally after KYC verification).
+ * Get all credentials issued to a DID.
+ * GET /credentials/:did
+ */
+export async function getCredentials(did: string): Promise<Credential[]> {
+  return apiFetch<Credential[]>(API_ENDPOINTS.credentials.list(didPath(did)));
+}
+
+/**
+ * Get a single credential for a DID by type.
+ * GET /credentials/:did/:type
+ */
+export async function getCredential(did: string, type: string): Promise<Credential> {
+  return apiFetch<Credential>(
+    API_ENDPOINTS.credentials.get(didPath(did), encodeURIComponent(type)),
+  );
+}
+
+/**
+ * Issue a credential on-chain.
  *
- * TODO: Implement — POST ${API_BASE_URL}${API_ENDPOINTS.credentials.issue}
- * Body: { didAddress, issuerAddress, credentialType, credentialHash }
+ * NOTE: The backend signs issuance with its issuer key (the request carries no
+ * issuer address), minting a real, permanent on-chain credential record.
+ * Callers must supply a legitimate `did` and a real SHA-256 `credentialHash`.
+ * Never call this with fabricated input, and never from onboarding flows.
+ * POST /credentials
  */
 export async function issueCredential(
-  _request: IssueCredentialRequest,
-): Promise<{ success: boolean }> {
-  // TODO: Replace with real API call
-  return { success: true };
+  request: IssueCredentialRequest,
+): Promise<Credential> {
+  return apiFetch<Credential>(API_ENDPOINTS.credentials.issue, {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+}
+
+/**
+ * Revoke a credential on-chain.
+ * POST /credentials/:did/:type/revoke
+ */
+export async function revokeCredential(
+  did: string,
+  type: string,
+  request: RevokeCredentialRequest,
+): Promise<Credential> {
+  return apiFetch<Credential>(
+    API_ENDPOINTS.credentials.revoke(didPath(did), encodeURIComponent(type)),
+    {
+      method: 'POST',
+      body: JSON.stringify(request),
+    },
+  );
 }

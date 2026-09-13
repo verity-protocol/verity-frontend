@@ -4,15 +4,21 @@ export type {
   LinkedWallet,
   DidResolution,
   CredentialSummary,
-  CreateDidRequest,
-  LinkWalletRequest,
+  PrepareDidResult,
+  PrepareCreateRequest,
+  PrepareLinkRequest,
+  PrepareUnlinkRequest,
+  ConfirmCreateRequest,
+  ConfirmLinkRequest,
+  ConfirmUnlinkRequest,
   SetVerificationRequest,
+  ConfirmationResult,
 } from './did';
 
 export type {
   Credential,
-  CredentialWithIssuer,
   IssueCredentialRequest,
+  RevokeCredentialRequest,
   CredentialStatus,
 } from './credential';
 
@@ -34,8 +40,6 @@ export type {
 export type {
   StellarNetwork,
   WalletConnection,
-  SorobanRpcResult,
-  AccountBalance,
 } from './stellar';
 
 export type {

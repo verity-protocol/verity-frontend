@@ -60,16 +60,36 @@ export const ROUTES = {
 /** API endpoint paths — mirrors backend route definitions. */
 export const API_ENDPOINTS = {
   did: {
-    resolve: (id: string) => `/did/${id}`,
-    create: '/did',
-    wallets: (id: string) => `/did/${id}/wallets`,
-    linkWallet: (id: string) => `/did/${id}/wallets`,
-    unlinkWallet: (id: string, addr: string) => `/did/${id}/wallets/${addr}`,
-    setVerification: (id: string) => `/did/${id}/verification`,
+    /** GET /did/:identifier — resolve a DID to its resolution document. */
+    resolve: (identifier: string) => `/did/${identifier}`,
+    /** GET /did/wallet/:address — resolve DIDs linked to a wallet. */
+    findByWallet: (address: string) => `/did/wallet/${address}`,
+    /** GET /did/:identifier/wallets — list wallets linked to a DID. */
+    listWallets: (identifier: string) => `/did/${identifier}/wallets`,
+    /** POST /did/prepare — start DID creation (returns unsigned tx). */
+    prepareCreate: '/did/prepare',
+    /** POST /did/prepare/link — authorize linking a wallet. */
+    prepareLink: '/did/prepare/link',
+    /** POST /did/prepare/unlink — authorize unlinking a wallet. */
+    prepareUnlink: '/did/prepare/unlink',
+    /** POST /did/confirm — finish DID creation with a signed tx. */
+    confirmCreate: '/did/confirm',
+    /** POST /did/confirm/link — finish linking with a signed tx. */
+    confirmLink: '/did/confirm/link',
+    /** POST /did/confirm/unlink — finish unlinking with a signed tx. */
+    confirmUnlink: '/did/confirm/unlink',
+    /** PATCH /did/:identifier/verification — admin-gated on-chain set_verified. */
+    setVerification: (identifier: string) => `/did/${identifier}/verification`,
   },
   credentials: {
-    list: (didId: string) => `/credentials/${didId}`,
+    /** GET /credentials/:did — list credentials for a DID. */
+    list: (did: string) => `/credentials/${did}`,
+    /** GET /credentials/:did/:type — fetch one credential. */
+    get: (did: string, type: string) => `/credentials/${did}/${type}`,
+    /** POST /credentials — issue a credential on-chain. */
     issue: '/credentials',
+    /** POST /credentials/:did/:type/revoke — revoke a credential on-chain. */
+    revoke: (did: string, type: string) => `/credentials/${did}/${type}/revoke`,
   },
   auth: {
     createSession: '/auth/session',
